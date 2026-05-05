@@ -1,0 +1,75 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="bg" cx="50%" cy="40%" r="70%">
+    <stop offset="0%" stop-color="#1a0a3e"/>
+    <stop offset="100%" stop-color="#06060f"/>
+  </radialGradient>
+  <radialGradient id="body" cx="38%" cy="32%" r="62%">
+    <stop offset="0%" stop-color="#fff7a0"/>
+    <stop offset="55%" stop-color="#ffe600"/>
+    <stop offset="100%" stop-color="#ff8c00"/>
+  </radialGradient>
+  <radialGradient id="glow" cx="50%" cy="62%" r="50%">
+    <stop offset="0%" stop-color="#7c00ff" stop-opacity="0.28"/>
+    <stop offset="100%" stop-color="#7c00ff" stop-opacity="0"/>
+  </radialGradient>
+  <clipPath id="rc">
+    <rect width="512" height="512" rx="114"/>
+  </clipPath>
+</defs>
+
+<g clip-path="url(#rc)">
+  <!-- Background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- Stars -->
+  <circle cx="83"  cy="72"  r="1.7" fill="#fff" opacity="0.65"/>
+  <circle cx="155" cy="117" r="1.2" fill="#fff" opacity="0.5"/>
+  <circle cx="418" cy="64"  r="1.4" fill="#fff" opacity="0.6"/>
+  <circle cx="449" cy="148" r="1.1" fill="#fff" opacity="0.4"/>
+  <circle cx="57"  cy="204" r="1.4" fill="#fff" opacity="0.5"/>
+  <circle cx="471" cy="234" r="1.4" fill="#fff" opacity="0.55"/>
+  <circle cx="226" cy="57"  r="1.5" fill="#fff" opacity="0.6"/>
+  <circle cx="343" cy="95"  r="1.1" fill="#fff" opacity="0.45"/>
+  <circle cx="98"  cy="370" r="1.2" fill="#fff" opacity="0.35"/>
+  <circle cx="437" cy="400" r="1.1" fill="#fff" opacity="0.38"/>
+  <circle cx="45"  cy="422" r="1.4" fill="#fff" opacity="0.45"/>
+  <circle cx="468" cy="453" r="1.0" fill="#fff" opacity="0.3"/>
+  <circle cx="256" cy="460" r="1.2" fill="#fff" opacity="0.32"/>
+  <circle cx="370" cy="430" r="1.1" fill="#fff" opacity="0.35"/>
+
+  <!-- Glow behind bird -->
+  <ellipse cx="256" cy="286" rx="166" ry="68" fill="url(#glow)"/>
+
+  <!-- Trail -->
+  <ellipse cx="82"  cy="253" rx="15" ry="10" fill="#ffe600" opacity="0.10"/>
+  <ellipse cx="119" cy="248" rx="20" ry="12" fill="#ffe600" opacity="0.16"/>
+  <ellipse cx="161" cy="244" rx="23" ry="14" fill="#ffe600" opacity="0.22"/>
+
+  <!-- Wing -->
+  <ellipse cx="210" cy="280" rx="69" ry="38" fill="#ffc107" transform="rotate(-18 210 280)"/>
+  <ellipse cx="201" cy="272" rx="39" ry="20" fill="#ffe066" opacity="0.42" transform="rotate(-18 201 272)"/>
+
+  <!-- Body -->
+  <ellipse cx="268" cy="252" rx="134" ry="107" fill="url(#body)"/>
+  <ellipse cx="268" cy="252" rx="134" ry="107" fill="none" stroke="#ff6600" stroke-width="5.5"/>
+
+  <!-- Belly highlight -->
+  <ellipse cx="252" cy="274" rx="79" ry="54" fill="#fff7cc" opacity="0.25"/>
+
+  <!-- Cheek -->
+  <ellipse cx="313" cy="272" rx="35" ry="22" fill="#ff8080" opacity="0.52"/>
+
+  <!-- Eye white -->
+  <ellipse cx="337" cy="220" rx="45" ry="43" fill="#fff"/>
+  <!-- Pupil -->
+  <ellipse cx="350" cy="215" rx="23" ry="23" fill="#1a1a1a"/>
+  <!-- Shine -->
+  <circle  cx="358" cy="205" r="9"  fill="#fff"/>
+  <circle  cx="341" cy="228" r="4"  fill="#fff" opacity="0.55"/>
+
+  <!-- Beak -->
+  <path d="M386 224 L473 243 L386 265 Z" fill="#ff6d00"/>
+  <path d="M386 248 L458 243 L386 265 Z" fill="#cc4400" opacity="0.45"/>
+</g>
+</svg>
