@@ -3,21 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Floppy Wings</title>
+<title>Floppy Wings Neon</title>
 
 <style>
-html, body {
-  margin:0; padding:0;
+html,body{
+  margin:0;
+  padding:0;
   background:#0a0a1a;
   overflow:hidden;
   touch-action:none;
 }
-
-body {
-  overscroll-behavior:none;
-}
-
-canvas {
+body{overscroll-behavior:none;}
+canvas{
   display:block;
   max-width:100vw;
   max-height:100vh;
@@ -27,14 +24,14 @@ canvas {
 </head>
 
 <body>
-<canvas id="gameCanvas"></canvas>
+<canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById("gameCanvas");
+const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
-/* ---------- SAFE RESIZE ---------- */
+/* ---------- RESIZE ---------- */
 function resize(){
   const W = document.documentElement.clientWidth;
   const H = document.documentElement.clientHeight;
@@ -45,51 +42,50 @@ window.addEventListener("resize", resize);
 window.addEventListener("orientationchange", resize);
 resize();
 
-/* ---------- AUDIO FIX IOS ---------- */
-let audioCtx = null;
-function getAudio(){
-  if(!audioCtx){
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  return audioCtx;
-}
-function resumeAudio(){
-  if(audioCtx && audioCtx.state === "suspended"){
-    audioCtx.resume();
-  }
+/* ---------- SAFE ALPHA ---------- */
+function safeAlpha(a){
+  return (isFinite(a) && a>=0 && a<=1) ? a : 1;
 }
 
 /* ---------- BIRD ---------- */
 class Bird{
-  constructor(){
-    this.reset();
-  }
+  constructor(){ this.reset(); }
   reset(){
     this.x = canvas.width*0.25;
     this.y = canvas.height*0.4;
     this.vy = 0;
     this.size = canvas.width*0.08;
     this.alive = true;
+    this.angle = 0;
   }
-  flap(){
-    this.vy = -8;
-  }
+  flap(){ this.vy = -8; }
   update(){
     this.vy += 0.4;
     this.y += this.vy;
+    this.angle = Math.min(1, this.vy*0.08);
 
     if(this.y < 0) this.y = 0;
-
-    if(this.y > canvas.height-50){
-      this.y = canvas.height-50;
+    if(this.y > canvas.height-60){
+      this.y = canvas.height-60;
       this.alive = false;
     }
   }
   draw(){
-    ctx.fillStyle = "#ffe600";
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+
+    // glow léger SAFE
+    ctx.shadowColor = "#ffe600";
+    ctx.shadowBlur = 10;
+
+    ctx.fillStyle="#ffe600";
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size*0.4, 0, Math.PI*2);
+    ctx.arc(0,0,this.size*0.4,0,Math.PI*2);
     ctx.fill();
+
+    ctx.restore();
+    ctx.shadowBlur = 0;
   }
 }
 
@@ -101,49 +97,70 @@ class Pipe{
     this.gap = 160;
     this.gapY = Math.random()*(canvas.height-200)+100;
     this.speed = 3;
-    this.scored = false;
+    this.scored=false;
+  }
+  update(){ this.x -= this.speed; }
+
+  draw(){
+    // gradient SAFE
+    const g = ctx.createLinearGradient(this.x,0,this.x+this.w,0);
+    g.addColorStop(0,"#005c2a");
+    g.addColorStop(1,"#00e676");
+
+    ctx.fillStyle=g;
+
+    ctx.fillRect(this.x,0,this.w,this.gapY-this.gap/2);
+    ctx.fillRect(this.x,this.gapY+this.gap/2,this.w,canvas.height);
+  }
+}
+
+/* ---------- PARTICLES LIGHT ---------- */
+class Particle{
+  constructor(x,y){
+    this.x=x;
+    this.y=y;
+    this.vx=(Math.random()-0.5)*4;
+    this.vy=(Math.random()-0.5)*4;
+    this.life=1;
   }
   update(){
-    this.x -= this.speed;
+    this.x+=this.vx;
+    this.y+=this.vy;
+    this.life-=0.03;
   }
   draw(){
-    ctx.fillStyle="#00c853";
-
-    // haut
-    ctx.fillRect(this.x, 0, this.w, this.gapY-this.gap/2);
-
-    // bas
-    ctx.fillRect(this.x, this.gapY+this.gap/2, this.w, canvas.height);
+    ctx.globalAlpha = safeAlpha(this.life);
+    ctx.fillStyle="#ffe600";
+    ctx.fillRect(this.x,this.y,2,2);
+    ctx.globalAlpha = 1;
   }
 }
 
 /* ---------- GAME ---------- */
 class Game{
   constructor(){
-    this.bird = new Bird();
-    this.pipes = [];
-    this.frame = 0;
-    this.score = 0;
-    this.state = "menu";
-    this.paused = false;
+    this.bird=new Bird();
+    this.pipes=[];
+    this.particles=[];
+    this.frame=0;
+    this.score=0;
+    this.state="menu";
+    this.paused=false;
   }
 
   start(){
     this.bird.reset();
-    this.pipes = [];
-    this.score = 0;
-    this.frame = 0;
-    this.state = "play";
+    this.pipes=[];
+    this.particles=[];
+    this.score=0;
+    this.frame=0;
+    this.state="play";
   }
 
   tap(){
-    resumeAudio();
-
-    if(this.state==="menu" || this.state==="dead"){
-      this.start();
-      return;
+    if(this.state==="menu"||this.state==="dead"){
+      this.start(); return;
     }
-
     if(this.state==="play"){
       this.bird.flap();
     }
@@ -153,83 +170,90 @@ class Game{
     this.pipes.push(new Pipe(canvas.width));
   }
 
-  collide(pipe){
-    const bx = this.bird.x;
-    const by = this.bird.y;
-    const r  = this.bird.size*0.4;
+  collide(p){
+    const r=this.bird.size*0.4;
+    const bx=this.bird.x;
+    const by=this.bird.y;
 
-    // collision simple
-    if(
-      bx+r > pipe.x &&
-      bx-r < pipe.x+pipe.w
-    ){
-      if(
-        by-r < pipe.gapY-pipe.gap/2 ||
-        by+r > pipe.gapY+pipe.gap/2
-      ){
+    if(bx+r>p.x && bx-r<p.x+p.w){
+      if(by-r<p.gapY-p.gap/2 || by+r>p.gapY+p.gap/2){
         return true;
       }
     }
     return false;
   }
 
+  explode(){
+    const count = window.innerWidth<500 ? 12 : 20;
+    for(let i=0;i<count;i++){
+      this.particles.push(new Particle(this.bird.x,this.bird.y));
+    }
+  }
+
   update(){
     if(this.paused) return;
-
     if(this.state!=="play") return;
 
     this.frame++;
 
-    if(this.frame % 90 === 0){
-      this.spawn();
-    }
+    if(this.frame%90===0) this.spawn();
 
     this.bird.update();
 
-    // pipes
+    let collision=false;
+
     this.pipes.forEach(p=>{
       p.update();
 
-      // score
-      if(!p.scored && p.x < this.bird.x){
-        p.scored = true;
+      if(!p.scored && p.x<this.bird.x){
+        p.scored=true;
         this.score++;
       }
 
-      // collision
-      if(this.collide(p)){
-        this.state="dead";
-      }
+      if(this.collide(p)) collision=true;
     });
 
-    // cleanup
+    if(collision && this.bird.alive){
+      this.bird.alive=false;
+      this.explode();
+    }
+
+    // STOP logique lourde après mort
+    if(!this.bird.alive){
+      if(this.frame%60===0){
+        this.state="dead";
+      }
+    }
+
     this.pipes = this.pipes.filter(p=>p.x+p.w>0);
+
+    this.particles = this.particles.filter(p=>p.life>0);
+    this.particles.forEach(p=>p.update());
   }
 
   draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    // background
-    const g = ctx.createLinearGradient(0,0,0,canvas.height);
+    // background SAFE
+    const g=ctx.createLinearGradient(0,0,0,canvas.height);
     g.addColorStop(0,"#05051a");
     g.addColorStop(1,"#1a0a3e");
     ctx.fillStyle=g;
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    this.bird.draw();
     this.pipes.forEach(p=>p.draw());
+    this.bird.draw();
+    this.particles.forEach(p=>p.draw());
 
-    // score
     ctx.fillStyle="#fff";
     ctx.font="20px monospace";
     ctx.fillText(this.score,20,30);
 
     if(this.state==="menu"){
-      ctx.fillText("TAP TO PLAY", canvas.width/2-60, canvas.height/2);
+      ctx.fillText("TAP TO PLAY",canvas.width/2-60,canvas.height/2);
     }
-
     if(this.state==="dead"){
-      ctx.fillText("GAME OVER", canvas.width/2-70, canvas.height/2);
+      ctx.fillText("GAME OVER",canvas.width/2-70,canvas.height/2);
     }
   }
 
@@ -238,16 +262,15 @@ class Game{
       this.update();
       this.draw();
     }catch(e){
-      console.error("Crash évité", e);
+      console.error("crash évité",e);
       this.state="dead";
     }
-
     requestAnimationFrame(()=>this.loop());
   }
 }
 
 /* ---------- INIT ---------- */
-const game = new Game();
+const game=new Game();
 game.loop();
 
 /* ---------- INPUT ---------- */
@@ -255,16 +278,15 @@ function tap(e){
   e.preventDefault();
   game.tap();
 }
-
-document.addEventListener("touchstart", tap, {passive:false});
-document.addEventListener("mousedown", tap);
-document.addEventListener("keydown", e=>{
+document.addEventListener("touchstart",tap,{passive:false});
+document.addEventListener("mousedown",tap);
+document.addEventListener("keydown",e=>{
   if(e.code==="Space") game.tap();
 });
 
-/* ---------- PAUSE AUTO ---------- */
-document.addEventListener("visibilitychange", ()=>{
-  game.paused = document.hidden;
+/* ---------- PAUSE ---------- */
+document.addEventListener("visibilitychange",()=>{
+  game.paused=document.hidden;
 });
 </script>
 </body>
