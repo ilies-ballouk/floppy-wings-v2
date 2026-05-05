@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#06060f"/>
 <title>Floppy Wings</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 :root{
@@ -220,6 +221,44 @@ canvas{display:block;image-rendering:pixelated;max-height:100dvh;max-width:100vw
 
 @keyframes blink{0%,100%{opacity:.85;}50%{opacity:0;}}
 @keyframes pulse{0%,100%{opacity:.9;}50%{opacity:1;}}
+
+/* LEADERBOARD */
+#lbOverlay{
+  position:fixed;inset:0;background:rgba(6,6,15,.97);
+  display:flex;flex-direction:column;align-items:center;
+  padding:clamp(10px,3vw,20px);
+  padding-top:calc(var(--safe-top) + 14px);
+  overflow-y:auto;opacity:0;pointer-events:none;
+  transition:opacity .3s;z-index:60;
+}
+#lbOverlay.open{opacity:1;pointer-events:all;}
+#lbTable{width:100%;max-width:480px;border-collapse:collapse;margin-top:10px;}
+#lbTable th{font-size:clamp(6px,1.6vw,8px);color:rgba(255,255,255,.35);
+  padding:6px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.08);
+  letter-spacing:1px;}
+#lbTable td{font-size:clamp(7px,2vw,10px);padding:9px 8px;
+  border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.75);}
+#lbTable tr.me td{color:var(--cy);}
+#lbTable tr.gold-row td{color:var(--yw);}
+#lbTable tr.silver-row td{color:#c0c0c0;}
+#lbTable tr.bronze-row td{color:#cd7f32;}
+.lb-rank{width:32px;text-align:center;}
+.lb-score{text-align:right;color:var(--gn)!important;font-size:clamp(8px,2.2vw,11px)!important;}
+.lb-skin{text-align:center;width:28px;}
+#submitForm{display:flex;flex-direction:column;align-items:center;gap:10px;
+  width:100%;max-width:340px;margin:8px 0 14px;}
+#pseudoInput{
+  font-family:'Press Start 2P',monospace;font-size:clamp(9px,2.5vw,12px);
+  background:rgba(255,255,255,.06);border:1.5px solid rgba(0,245,255,.4);
+  color:#fff;padding:11px 14px;border-radius:5px;width:100%;text-align:center;
+  outline:none;letter-spacing:3px;
+}
+#pseudoInput::placeholder{color:rgba(255,255,255,.2);letter-spacing:1px;}
+#pseudoInput:focus{border-color:var(--cy);background:rgba(0,245,255,.05);}
+.lb-status{font-size:clamp(6px,1.7vw,9px);color:var(--gn);min-height:16px;text-align:center;letter-spacing:1px;}
+.lb-status.err{color:var(--pk);}
+.lb-status.info{color:rgba(255,255,255,.45);}
+.lb-sep{width:100%;max-width:480px;border:none;border-top:1px solid rgba(255,255,255,.08);margin:10px 0;}
 </style>
 </head>
 <body>
@@ -252,6 +291,9 @@ canvas{display:block;image-rendering:pixelated;max-height:100dvh;max-width:100vw
     <button class="btn gn" id="btnUpg">⚡ UPGRADES</button>
     <button class="btn"    id="btnStats">📊 STATS</button>
   </div>
+  <div class="btn-row">
+    <button class="btn pu" id="btnLb">🏅 CLASSEMENT</button>
+  </div>
 </div>
 
 <!-- DEAD -->
@@ -264,6 +306,7 @@ canvas{display:block;image-rendering:pixelated;max-height:100dvh;max-width:100vw
   <div class="btn-row">
     <button class="btn yw" id="btnReplay">▶ REJOUER</button>
     <button class="btn"    id="btnDeadMenu">≡ MENU</button>
+    <button class="btn pu" id="btnDeadLb">🏅 CLASSEMENT</button>
   </div>
 </div>
 
@@ -317,18 +360,138 @@ canvas{display:block;image-rendering:pixelated;max-height:100dvh;max-width:100vw
   <button class="btn" id="btnNinjaClose">PLUS TARD</button>
 </div>
 
+<!-- LEADERBOARD OVERLAY -->
+<div class="overlay" id="lbOverlay">
+  <div class="overlay-title">🏅 CLASSEMENT</div>
+  <div style="font-size:clamp(6px,1.7vw,9px);color:rgba(255,255,255,.3);margin-bottom:8px;letter-spacing:1px;">TOP 20 MONDIAL</div>
+
+  <div id="submitForm">
+    <div style="font-size:clamp(8px,2.2vw,11px);color:rgba(255,255,255,.6);">TON SCORE : <span id="lbMyScore" style="color:var(--yw);">0</span></div>
+    <input id="pseudoInput" maxlength="16" placeholder="TON PSEUDO..." autocomplete="off" spellcheck="false"/>
+    <div id="lbStatus" class="lb-status info">2 à 16 caractères</div>
+    <button class="btn gn" id="btnSubmitScore">📤 SOUMETTRE</button>
+  </div>
+
+  <hr class="lb-sep"/>
+
+  <table id="lbTable">
+    <thead>
+      <tr>
+        <th class="lb-rank">#</th>
+        <th>PSEUDO</th>
+        <th class="lb-skin">SKIN</th>
+        <th class="lb-score" style="text-align:right;">SCORE</th>
+      </tr>
+    </thead>
+    <tbody id="lbBody">
+      <tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,.25);padding:24px;font-size:9px;">CHARGEMENT...</td></tr>
+    </tbody>
+  </table>
+
+  <div class="btn-row" style="margin-top:16px;">
+    <button class="btn" id="btnCloseLb">← RETOUR</button>
+  </div>
+</div>
+
 <!-- BADGES -->
 <div id="diffBadge"></div>
 <div id="ninjaBadge">🥷 NINJA : SCORE 93</div>
 
 <script>
 /* ═══════════════════════════════════════════════
-   FLOPPY WINGS v4
+   FLOPPY WINGS v5
+   – Classement en ligne Supabase
    – Power-ups remplacés par items ⏸ PAUSE
    – Pause avec décompte 3-2-1
    – Skins premium avec traînées enrichies
-   – Prix mis à jour
 ═══════════════════════════════════════════════ */
+
+/* ── SUPABASE ── */
+const SB_URL='https://oiyqmvaiwcujiutnwiof.supabase.co';
+const SB_KEY='sb_publishable_ld3GijsyIgoZAfZkz6IwpA_SgF24STA';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+
+const SKIN_EMOJI={classic:'🐦',cyan:'💎',pink:'🌸',ice:'❄️',fire:'🔥',galaxy:'🌌',gold:'✨',ninja:'🥷'};
+let _pendingScore=null;
+
+async function lbLoad(){
+  const body=document.getElementById('lbBody');
+  body.innerHTML='<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,.25);padding:24px;font-size:9px;">CHARGEMENT...</td></tr>';
+  try{
+    const{data,error}=await sb
+      .from('leaderboard')
+      .select('pseudo,score,skin')
+      .order('score',{ascending:false})
+      .limit(20);
+    if(error)throw error;
+    if(!data||!data.length){
+      body.innerHTML='<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,.25);padding:24px;font-size:9px;">AUCUN SCORE ENCORE</td></tr>';
+      return;
+    }
+    const myPseudo=(localStorage.getItem('fwPseudo')||'').toUpperCase();
+    body.innerHTML=data.map((row,i)=>{
+      const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+      const isMe=myPseudo&&row.pseudo.toUpperCase()===myPseudo;
+      const rowClass=isMe?'me':i===0?'gold-row':i===1?'silver-row':i===2?'bronze-row':'';
+      const em=SKIN_EMOJI[row.skin]||'🐦';
+      return`<tr class="${rowClass}">
+        <td class="lb-rank">${medal}</td>
+        <td>${row.pseudo}</td>
+        <td class="lb-skin">${em}</td>
+        <td class="lb-score">${row.score}</td>
+      </tr>`;
+    }).join('');
+  }catch(e){
+    body.innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--pk);padding:24px;font-size:9px;">ERREUR RÉSEAU</td></tr>`;
+  }
+}
+
+async function lbSubmit(pseudo,score,skin){
+  const status=document.getElementById('lbStatus');
+  status.textContent='ENVOI EN COURS...';status.className='lb-status info';
+  pseudo=pseudo.toUpperCase().replace(/[^A-Z0-9_\-]/g,'').slice(0,16);
+  if(pseudo.length<2){status.textContent='MIN 2 CARACTÈRES';status.className='lb-status err';return;}
+  try{
+    const{data:existing}=await sb
+      .from('leaderboard').select('score').eq('pseudo',pseudo).maybeSingle();
+    if(existing&&existing.score>=score){
+      status.textContent=`TON RECORD EST DÉJÀ ${existing.score} !`;
+      status.className='lb-status info';
+      lbLoad();return;
+    }
+    const{error}=await sb.from('leaderboard').upsert(
+      {pseudo,score,skin},
+      {onConflict:'pseudo'}
+    );
+    if(error)throw error;
+    localStorage.setItem('fwPseudo',pseudo);
+    status.textContent='✓ SCORE SOUMIS !';status.className='lb-status';
+    document.getElementById('submitForm').style.display='none';
+    _pendingScore=null;
+    SFX.buy();vib(30);
+    setTimeout(lbLoad,500);
+  }catch(e){
+    status.textContent='ERREUR: '+(e.message||'INCONNU');
+    status.className='lb-status err';
+  }
+}
+
+function openLeaderboard(scoreToSubmit=null){
+  const form=document.getElementById('submitForm');
+  _pendingScore=scoreToSubmit;
+  if(scoreToSubmit!==null&&scoreToSubmit>0){
+    document.getElementById('lbMyScore').textContent=scoreToSubmit;
+    const saved=localStorage.getItem('fwPseudo')||'';
+    document.getElementById('pseudoInput').value=saved;
+    document.getElementById('lbStatus').textContent=saved?'Pseudo pré-rempli — modifie si besoin':'2 à 16 caractères';
+    document.getElementById('lbStatus').className='lb-status info';
+    form.style.display='flex';
+  }else{
+    form.style.display='none';
+  }
+  document.getElementById('lbOverlay').classList.add('open');
+  lbLoad();
+}
 
 function sa(v){return!isFinite(v)?0:Math.max(0,Math.min(1,v));}
 function r(a,b){return a+Math.random()*(b-a);}
@@ -1055,6 +1218,7 @@ function showScreen(id){
   if(id)document.getElementById(id).classList.remove('hidden');
 }
 function showDeadScreen(score,coins){
+  _pendingScore=score;
   let medal='';
   if(score>=93)medal='🥷';else if(score>=30)medal='🏆';else if(score>=15)medal='🥇';else if(score>=7)medal='🥈';else if(score>=3)medal='🥉';
   document.getElementById('deadMedal').textContent=medal;
@@ -1072,7 +1236,7 @@ function showMenu(){
   showScreen('menuScreen');
 }
 function anyOverlayOpen(){
-  return ['shopOverlay','upgOverlay','statsOverlay'].some(id=>document.getElementById(id).classList.contains('open'))
+  return['shopOverlay','upgOverlay','statsOverlay','lbOverlay'].some(id=>document.getElementById(id).classList.contains('open'))
     ||document.getElementById('ninjaUnlock').classList.contains('show');
 }
 function showDiffBadge(name){
@@ -1215,6 +1379,20 @@ document.getElementById('btnCloseUpg').addEventListener('click',e=>{e.stopPropag
 
 document.getElementById('btnStats').addEventListener('click',e=>{e.stopPropagation();renderStats();document.getElementById('statsOverlay').classList.add('open');});
 document.getElementById('btnCloseStats').addEventListener('click',e=>{e.stopPropagation();document.getElementById('statsOverlay').classList.remove('open');showMenu();});
+
+document.getElementById('btnLb').addEventListener('click',e=>{e.stopPropagation();openLeaderboard(null);});
+document.getElementById('btnDeadLb').addEventListener('click',e=>{e.stopPropagation();openLeaderboard(_pendingScore);});
+document.getElementById('btnCloseLb').addEventListener('click',e=>{e.stopPropagation();document.getElementById('lbOverlay').classList.remove('open');showMenu();});
+document.getElementById('btnSubmitScore').addEventListener('click',e=>{
+  e.stopPropagation();
+  const pseudo=document.getElementById('pseudoInput').value.trim();
+  if(pseudo.length<2){
+    document.getElementById('lbStatus').textContent='MIN 2 CARACTÈRES';
+    document.getElementById('lbStatus').className='lb-status err';
+    return;
+  }
+  lbSubmit(pseudo,_pendingScore,SV.equipped);
+});
 
 document.getElementById('btnNinjaEquip').addEventListener('click',e=>{
   e.stopPropagation();if(!SV.owned.includes('ninja'))SV.owned.push('ninja');
